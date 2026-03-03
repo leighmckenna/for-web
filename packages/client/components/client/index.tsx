@@ -13,7 +13,7 @@ import type { Client, User } from "stoat.js";
 import { useInstance } from "@revolt/instance";
 import { useModals } from "@revolt/modal";
 import { fetchLatestChangelog } from "@revolt/modal/modals/Changelog";
-import { State } from "@revolt/state";
+import { useState } from "@revolt/state";
 
 import ClientController from "./Controller";
 
@@ -27,12 +27,12 @@ const clientContext = createContext(null! as ClientController);
 /**
  * Mount the modal controller
  */
-export function ClientContext(props: { state: State; children: JSXElement }) {
+export function ClientContext(props: { children: JSXElement }) {
   const { openModal } = useModals();
+  const state = useState();
   const instance = useInstance();
 
-  // eslint-disable-next-line solid/reactivity
-  const controller = new ClientController(props.state, instance);
+  const controller = new ClientController(state, instance);
   onCleanup(() => controller.dispose());
 
   let fetchedChangelog = false;
@@ -45,12 +45,9 @@ export function ClientContext(props: { state: State; children: JSXElement }) {
 
         fetchLatestChangelog().then((changelog) => {
           if (!changelog) return;
-          if (props.state["release-notes"].lastSeenId === changelog.id) return;
+          if (state["release-notes"].lastSeenId === changelog.id) return;
 
-          props.state["release-notes"].markSeen(
-            changelog.id,
-            changelog.published_at,
-          );
+          state["release-notes"].markSeen(changelog.id, changelog.published_at);
 
           openModal({
             type: "changelog",
@@ -90,26 +87,16 @@ export function ClientContext(props: { state: State; children: JSXElement }) {
  * @returns Lifecycle information
  */
 export function useClientLifecycle() {
-  const { login, logout, selectUsername, lifecycle, isLoggedIn, isError } =
-    useContext(clientContext);
-
-  return {
-    login,
-    logout,
-    selectUsername,
-    lifecycle,
-    isLoggedIn,
-    isError,
-  };
+  return useContext(clientContext);
 }
 
 /**
- * Get the currently active client if one is available
+ * Get the currently active client
  * @returns Client
  */
 export function useClient(): Accessor<Client> {
-  const controller = useContext(clientContext);
-  return () => controller.getCurrentClient()!;
+  const instance = useInstance();
+  return () => instance.client;
 }
 
 /**
@@ -117,8 +104,8 @@ export function useClient(): Accessor<Client> {
  * @returns User
  */
 export function useUser(): Accessor<User | undefined> {
-  const controller = useContext(clientContext);
-  return () => controller.getCurrentClient()!.user;
+  const instance = useInstance();
+  return () => instance.client.user;
 }
 
 /**

@@ -5,7 +5,7 @@ import { Server } from "stoat.js";
 import { css } from "styled-system/css";
 
 import { useClient, useClientLifecycle } from "@revolt/client";
-import { CONFIGURATION } from "@revolt/common";
+import { useInstance } from "@revolt/instance";
 import { useUser } from "@revolt/markdown/users";
 import { useModals } from "@revolt/modal";
 import { fetchLatestChangelog } from "@revolt/modal/modals/Changelog";
@@ -114,6 +114,7 @@ const Config: SettingsConfiguration<{ server: Server }> = {
   list(_, onClose) {
     const { pop, openModal } = useModals();
     const { logout } = useClientLifecycle();
+    const { limits } = useInstance();
 
     return {
       context: null!,
@@ -213,7 +214,7 @@ const Config: SettingsConfiguration<{ server: Server }> = {
             {
               id: "voice",
               icon: <MdMic {...iconSize(20)} />,
-              title: CONFIGURATION.ENABLE_VIDEO ? (
+              title: limits().video ? (
                 <Trans>Voice & Video</Trans>
               ) : (
                 <Trans>Voice</Trans>

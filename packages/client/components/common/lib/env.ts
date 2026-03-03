@@ -1,7 +1,10 @@
-const DEFAULT_API_URL =
-  (import.meta.env.DEV ? import.meta.env.VITE_DEV_API_URL : undefined) ??
-  (import.meta.env.VITE_API_URL as string) ??
-  "https://stoat.chat/api";
+export const STOAT_HOST = "stoat.chat";
+export const STOAT_API = "https://api.stoat.chat";
+
+/** App `stoat.json` endpoint format */
+export interface AppConfig {
+  api: string;
+}
 
 export default {
   /**
@@ -9,48 +12,19 @@ export default {
    */
   DEBUG: import.meta.env.DEV || true,
   /**
+   * Default instance (without the protocol)
+   */
+  DEFAULT_HOST:
+    (import.meta.env.DEV ? import.meta.env.VITE_DEV_HOST : undefined) ??
+    (import.meta.env.VITE_HOST as string) ??
+    STOAT_HOST,
+  /**
    * What API server to connect to by default.
    */
-  DEFAULT_API_URL,
-  /**
-   * Whether this is Stoat
-   */
-  IS_STOAT: [
-    // historically...
-    "https://api.revolt.chat",
-    "https://beta.revolt.chat/api",
-    "https://revolt.chat/api",
-    // ... and now:
-    "https://stoat.chat/api",
-  ].includes(DEFAULT_API_URL),
-  /**
-   * What WS server to connect to by default.
-   */
-  DEFAULT_WS_URL:
-    (import.meta.env.DEV ? import.meta.env.VITE_DEV_WS_URL : undefined) ??
-    (import.meta.env.VITE_WS_URL as string) ??
-    "wss://stoat.chat/events",
-  /**
-   * What media server to connect to by default.
-   */
-  DEFAULT_MEDIA_URL:
-    (import.meta.env.DEV ? import.meta.env.VITE_DEV_MEDIA_URL : undefined) ??
-    (import.meta.env.VITE_MEDIA_URL as string) ??
-    "https://cdn.stoatusercontent.com",
-  /**
-   * What proxy server to connect to by default.
-   */
-  DEFAULT_PROXY_URL:
-    (import.meta.env.DEV ? import.meta.env.VITE_DEV_PROXY_URL : undefined) ??
-    (import.meta.env.VITE_PROXY_URL as string) ??
-    "https://proxy.stoatusercontent.com",
-  /**
-   * What gifbox server to connect to by default.
-   */
-  DEFAULT_GIFBOX_URL:
-    (import.meta.env.DEV ? import.meta.env.VITE_DEV_GIFBOX_URL : undefined) ??
-    (import.meta.env.VITE_GIFBOX_URL as string) ??
-    "https://api.gifbox.me",
+  DEFAULT_API_URL:
+    (import.meta.env.DEV ? import.meta.env.VITE_DEV_API_URL : undefined) ??
+    (import.meta.env.VITE_API_URL as string) ??
+    STOAT_API,
   /**
    * hCaptcha site key to use if enabled
    */
@@ -60,31 +34,14 @@ export default {
    */
   MAX_REPLIES: (import.meta.env.VITE_CFG_MAX_REPLIES as number) ?? 5,
   /**
-   * Maximum number of attachments a message can have
-   */
-  MAX_ATTACHMENTS: (import.meta.env.VITE_CFG_MAX_ATTACHMENTS as number) ?? 5,
-  /**
    * Maximum number of emoji a server can have
    */
   MAX_EMOJI: (import.meta.env.VITE_CFG_MAX_EMOJI as number) ?? 100,
-  /**
-   * Max file size allowed for uploads (in bytes)
-   * 20 MB = 20 * 1024 * 1024 = 20,971,520 bytes
-   * I kinda wonder if this should be a setting, or something fetched from the backend dynamically.
-   */
-  MAX_FILE_SIZE:
-    (import.meta.env.VITE_CFG_MAX_FILE_SIZE as number) ?? 20_000_000,
   /**
    * RNNoise worklet CDN host location. Defaults to blank, which uses the url provided by the livekit-rnnoise-processor package.
    */
   RNNOISE_WORKLET_CDN_URL:
     (import.meta.env.VITE_RNNOISE_WORKLET_CDN_URL as string) ?? "",
-  /**
-   * Enable video allows the web client to enable video and screensharing
-   */
-  ENABLE_VIDEO:
-    ((import.meta.env.VITE_CFG_ENABLE_VIDEO as string) ?? "").toLowerCase() ==
-    "true",
   /**
    * Session ID to set during development.
    */

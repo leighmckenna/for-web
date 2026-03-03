@@ -1,62 +1,99 @@
+import { Navigator } from "@solidjs/router";
+import { Accessor, createMemo } from "solid-js";
+
+import { CONFIGURATION } from "@revolt/common";
+import { AppConfig, STOAT_HOST } from "@revolt/common/lib/env";
+import { Client, UserLimits } from "stoat.js";
+
+import { DefaultHost, StoatOrigin } from ".";
+
+const R_RelPath = /^\/i\/[^/]+/;
+
 export default class Instance {
+  readonly host?: string;
+  readonly origin: string;
   readonly isStoat: boolean;
+  readonly #base;
+  readonly #nav;
+
   readonly apiUrl: string;
   readonly wsUrl: string;
   readonly mediaUrl: string;
   readonly proxyUrl: string;
   readonly gifboxUrl: string;
-  readonly hcaptcha_sitekey: string;
-  readonly maxEmoji: number;
-  readonly enableVideo: boolean;
-  readonly hostname: string | undefined;
+  readonly captchaKey: string;
 
-  // Not implemented, but should be fine for now
-  // readonly maxReplies: number;
-  // readonly maxAttachments: number;
-  // readonly maxFileSize: number;
-  // DEVELOPMENT_SESSION_ID
-  // DEVELOPMENT_TOKEN
-  // DEVELOPMENT_USER_ID
+  #firstInit = true;
+  readonly client!: Client;
+  readonly globalLimits;
+  readonly baseLimits;
 
-  constructor(
-    apiUrl: string,
-    wsUrl: string,
-    mediaUrl: string,
-    proxyUrl: string,
-    gifboxUrl: string,
-    hcaptcha_sitekey: string,
-    maxEmoji: number,
-    enableVideo: boolean,
-    hostname?: string,
-  ) {
-    this.isStoat = [
-      // historically...
-      "https://api.revolt.chat",
-      "https://beta.revolt.chat/api",
-      "https://revolt.chat/api",
-      // ... and now:
-      "https://stoat.chat/api",
-    ].includes(apiUrl);
-    this.apiUrl = apiUrl;
-    this.wsUrl = wsUrl;
-    this.mediaUrl = mediaUrl;
-    this.proxyUrl = proxyUrl;
-    this.gifboxUrl = gifboxUrl;
-    this.hcaptcha_sitekey = hcaptcha_sitekey;
-    this.maxEmoji = maxEmoji;
-    this.enableVideo = enableVideo;
-    this.hostname = hostname;
+  /** Current enforced limits based on user type */
+  readonly limits: Accessor<UserLimits>;
+
+  constructor(appCfg: AppConfig, cli: Client, host: string, nav: Navigator) {
+    const apiCfg = (this.client = cli).configuration!;
+
+    //Endpoints
+    this.apiUrl = appCfg.api;
+    this.wsUrl = apiCfg.ws;
+    this.mediaUrl = apiCfg.features.autumn.url;
+    this.proxyUrl = apiCfg.features.january.url;
+    this.gifboxUrl = "https://api.gifbox.me"; //TODO Gifbox URL from backend
+
+    //Features
+    this.captchaKey = CONFIGURATION.HCAPTCHA_SITEKEY; //TODO Detect from API
+    this.globalLimits = apiCfg.features.limits.global;
+    this.baseLimits = apiCfg.features.limits.new_user;
+    this.limits = createMemo(() => this.client.limits ?? this.baseLimits);
+
+    this.host = host || undefined;
+    if (!host) host = DefaultHost;
+
+    const hostUrl = new URL(`https://${host}`);
+    this.origin = hostUrl.origin;
+    this.isStoat = host === STOAT_HOST;
+    this.#base = this.isStoat ? "" : `/i/${host}`;
+    this.#nav = nav;
   }
 
-  /**
-   * Prepends the given url with this instances' base path.
-   * @param url - The url to link to.
+  /** Prepend a relative path with instance base URL
+   * @param pathOnly Get only the path component and not URL
+   * @param base Defaults to the base path of this instance
    */
-  href(url: string) {
-    if (!this.hostname) {
-      return url;
+  href = (path: string, pathOnly?: boolean, base?: string) =>
+    (pathOnly ? "" : StoatOrigin) + (base ? `/i/${base}` : this.#base) + path;
+
+  /** Convert an instance-specific path back to relative form */
+  static relPath = (path: string) => path.replace(R_RelPath, "");
+
+  /** Switch to a new instance and redirect the client */
+  switchTo(host: string) {
+    const rel = Instance.relPath(location.pathname);
+    this.#nav(this.href(rel, true, host));
+  }
+
+  /** Create a new Stoat.js client, disposing the old one */
+  newClient() {
+    if (this.#firstInit) {
+      this.#firstInit = false;
+      return this.client;
     }
 
-    return `/instance/${this.hostname}${url}`;
+    this.client.events.removeAllListeners();
+    this.client.removeAllListeners();
+    this.client.events.disconnect();
+
+    //@ts-expect-error readonly
+    return (this.client = _newClient(this.apiUrl));
   }
+}
+
+export function _newClient(apiUrl: string) {
+  return new Client({
+    baseURL: apiUrl,
+    autoReconnect: false,
+    syncUnreads: true,
+    debug: import.meta.env.DEV,
+  });
 }

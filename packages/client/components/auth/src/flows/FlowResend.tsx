@@ -39,7 +39,7 @@ export default function FlowResend() {
       <FlowTitle>
         <Trans>Resend verification</Trans>
       </FlowTitle>
-      <Form onSubmit={resend} captcha={instance.hcaptcha_sitekey}>
+      <Form onSubmit={resend} captcha={instance.captchaKey}>
         <Fields fields={["email"]} />
         <Button type="submit">
           <Trans>Resend</Trans>

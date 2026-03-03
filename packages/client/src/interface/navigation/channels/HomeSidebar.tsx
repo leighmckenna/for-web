@@ -79,7 +79,9 @@ export const HomeSidebar = (props: Props) => {
             href="/app"
             size="normal"
             icon={<Symbol>home</Symbol>}
-            attention={location.pathname === "/app" ? "selected" : "normal"}
+            attention={
+              location.pathname.endsWith("/app") ? "selected" : "normal"
+            }
           >
             <ButtonTitle>
               <Trans>Home</Trans>
@@ -92,7 +94,9 @@ export const HomeSidebar = (props: Props) => {
             href="/friends"
             size="normal"
             icon={<Symbol>group</Symbol>}
-            attention={location.pathname === "/friends" ? "selected" : "normal"}
+            attention={
+              location.pathname.endsWith("/friends") ? "selected" : "normal"
+            }
           >
             <ButtonTitle>
               <Trans>Friends</Trans>
