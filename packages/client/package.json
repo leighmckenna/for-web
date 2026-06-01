@@ -14,7 +14,7 @@
     "@lingui/conf": "^5.3.1",
     "@lingui/core": "^5.3.1",
     "@lingui/macro": "^5.3.1",
-    "@pandacss/dev": "^0.46.1",
+    "@pandacss/dev": "^0.54.0",
     "@playwright/test": "^1.60.0",
     "@solid-devtools/transform": "^0.10.4",
     "@types/hast": "^3.0.4",
