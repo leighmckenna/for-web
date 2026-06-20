@@ -93,7 +93,7 @@ const SeparatedColumn = styled(Column, {
 const LegalLinks = styled("div", {
   base: {
     display: "flex",
-    gap: "16px",
+    gap: "var(--gap-lg)",
     fontSize: "0.8em",
     color: "var(--md-sys-color-on-surface-variant)",
 
@@ -120,6 +120,13 @@ export function HomePage() {
   const showLoungeButton = CONFIGURATION.IS_STOAT;
   const isInLounge =
     client()!.servers.get("01F7ZSBSFHQ8TA81725KQCSDDP") !== undefined;
+
+  const isLegalLinksAvailable = () => {
+    if (client().configured()) {
+      return client().configuration?.features.legal_links !== undefined;
+    }
+    return false;
+  };
 
   return (
     <Base>
@@ -249,7 +256,7 @@ export function HomePage() {
             </CategoryButton>
           </SeparatedColumn>
         </Buttons>
-        <Show when={client()!.configuration?.features.legal_links}>
+        <Show when={isLegalLinksAvailable()}>
           <LegalLinks>
             <Show
               when={
