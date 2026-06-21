@@ -88,27 +88,6 @@ const SeparatedColumn = styled(Column, {
 });
 
 /**
- * Legal links footer row
- */
-const LegalLinks = styled("div", {
-  base: {
-    display: "flex",
-    gap: "var(--gap-lg)",
-    fontSize: "0.8em",
-    color: "var(--md-sys-color-on-surface-variant)",
-
-    "& a": {
-      color: "inherit",
-      textDecoration: "none",
-
-      "&:hover": {
-        textDecoration: "underline",
-      },
-    },
-  },
-});
-
-/**
  * Home page
  */
 export function HomePage() {
@@ -120,13 +99,6 @@ export function HomePage() {
   const showLoungeButton = CONFIGURATION.IS_STOAT;
   const isInLounge =
     client()!.servers.get("01F7ZSBSFHQ8TA81725KQCSDDP") !== undefined;
-
-  const isLegalLinksAvailable = () => {
-    if (client().configured()) {
-      return client().configuration?.features.legal_links !== undefined;
-    }
-    return false;
-  };
 
   return (
     <Base>
@@ -256,51 +228,6 @@ export function HomePage() {
             </CategoryButton>
           </SeparatedColumn>
         </Buttons>
-        <Show when={isLegalLinksAvailable()}>
-          <LegalLinks>
-            <Show
-              when={
-                client()!.configuration?.features.legal_links.terms_of_service
-              }
-            >
-              <a
-                href={
-                  client()!.configuration?.features.legal_links.terms_of_service
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Trans>Terms of Service</Trans>
-              </a>
-            </Show>
-            <Show
-              when={
-                client()!.configuration?.features.legal_links.privacy_policy
-              }
-            >
-              <a
-                href={
-                  client()!.configuration?.features.legal_links.privacy_policy
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Trans>Privacy Policy</Trans>
-              </a>
-            </Show>
-            <Show
-              when={client()!.configuration?.features.legal_links.guidelines}
-            >
-              <a
-                href={client()!.configuration?.features.legal_links.guidelines}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Trans>Community Guidelines</Trans>
-              </a>
-            </Show>
-          </LegalLinks>
-        </Show>
         <Show when={IS_DEV}>
           <Button onPress={() => navigate("/dev")}>
             Open Development Page
