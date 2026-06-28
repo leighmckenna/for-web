@@ -64,16 +64,14 @@ export default {
    */
   MAX_ATTACHMENTS: (import.meta.env.VITE_CFG_MAX_ATTACHMENTS as number) ?? 5,
   /**
-   * Maximum number of emoji a server can have
+   * Default maximum number of emoji a server can have
    */
-  MAX_EMOJI: (import.meta.env.VITE_CFG_MAX_EMOJI as number) ?? 100,
+  MAX_EMOJI: 100,
   /**
-   * Max file size allowed for uploads (in bytes)
+   * Default max file size allowed for uploads (in bytes)
    * 20 MB = 20 * 1024 * 1024 = 20,971,520 bytes
-   * I kinda wonder if this should be a setting, or something fetched from the backend dynamically.
    */
-  MAX_FILE_SIZE:
-    (import.meta.env.VITE_CFG_MAX_FILE_SIZE as number) ?? 20_000_000,
+  MAX_FILE_SIZE: 20_000_000,
   /**
    * RNNoise worklet CDN host location. Defaults to blank, which uses the url provided by the livekit-rnnoise-processor package.
    */

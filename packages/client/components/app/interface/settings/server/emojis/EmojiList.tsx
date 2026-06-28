@@ -28,8 +28,17 @@ export function EmojiList(props: { server: Server }) {
   const client = useClient();
   const { openModal } = useModals();
 
+  const maxEmoji = () => {
+    const cl = client();
+    if (!cl.configured()) return CONFIGURATION.MAX_EMOJI;
+    return (
+      cl.configuration?.features.limits.global.server_emoji ??
+      CONFIGURATION.MAX_EMOJI
+    );
+  };
+
   function isDisabled() {
-    return props.server.emojis.length >= CONFIGURATION.MAX_EMOJI;
+    return props.server.emojis.length >= maxEmoji();
   }
 
   const editGroup = createFormGroup(
@@ -102,8 +111,8 @@ export function EmojiList(props: { server: Server }) {
                 <Switch
                   fallback={
                     <Trans>
-                      {CONFIGURATION.MAX_EMOJI - props.server.emojis.length}{" "}
-                      emoji slots remaining
+                      {maxEmoji() - props.server.emojis.length} emoji slots
+                      remaining
                     </Trans>
                   }
                 >
