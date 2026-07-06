@@ -33,7 +33,7 @@ const VoiceStatusSymbol = styled("div", {
 });
 
 /**
- * Unreads count SVG graphic
+ * Voice status SVG graphic
  */
 function VoiceGraphic(props: Props) {
   return (
@@ -67,7 +67,7 @@ function VoiceGraphic(props: Props) {
 }
 
 /**
- * Standalone unreads count element
+ * Standalone voice status element
  */
 export function VoiceStatus(props: Props & { size: string }) {
   return (
