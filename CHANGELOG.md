@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/stoatchat/for-web/compare/stoat-for-web-v0.10.0...stoat-for-web-v0.11.0) (2026-07-06)
+
+
+### Features
+
+* helpful loading screen ([#1327](https://github.com/stoatchat/for-web/issues/1327)) ([a9dde04](https://github.com/stoatchat/for-web/commit/a9dde041d6b4d1d77443571a72cf5631c0eda58f))
+
+
+### Bug Fixes
+
+* user could report priviledged accounts ([#1319](https://github.com/stoatchat/for-web/issues/1319)) ([9405255](https://github.com/stoatchat/for-web/commit/94052551cc5507a288069fae6ec551ed47a52d24))
+
 ## [0.10.0](https://github.com/stoatchat/for-web/compare/stoat-for-web-v0.9.1...stoat-for-web-v0.10.0) (2026-06-30)
 
 
