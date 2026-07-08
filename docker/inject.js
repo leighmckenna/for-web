@@ -22,6 +22,8 @@ const REPLACEMENTS = {
   __VITE_CFG_ENABLE_VIDEO__: process.env.VITE_CFG_ENABLE_VIDEO || "",
   __VITE_GIFBOX_URL__: process.env.VITE_GIFBOX_URL || "",
   __VITE_RNNOISE_WORKLET_CDN_URL__: process.env.VITE_RNNOISE_WORKLET_CDN_URL || "",
+  // build-time truthiness may fold away the in-code fallback, so default here
+  __VITE_BRAND_NAME__: process.env.VITE_BRAND_NAME || "Ermine",
 };
 
 console.log("Preparing injected build...");
@@ -34,7 +36,12 @@ const files = readdirSync(OUT_DIR, { recursive: true });
 
 for (const file of files) {
   const path = join(OUT_DIR, file);
-  if (!path.endsWith(".js") && !path.endsWith(".html")) continue;
+  if (
+    !path.endsWith(".js") &&
+    !path.endsWith(".html") &&
+    !path.endsWith(".webmanifest")
+  )
+    continue;
 
   let data = readFileSync(path, "utf-8");
   let modified = false;

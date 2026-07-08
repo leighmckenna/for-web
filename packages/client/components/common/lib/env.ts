@@ -1,3 +1,5 @@
+import { isFirstPartyHost } from "./branding";
+
 const DEFAULT_API_URL =
   (import.meta.env.DEV ? import.meta.env.VITE_DEV_API_URL : undefined) ??
   (import.meta.env.VITE_API_URL as string) ??
@@ -13,16 +15,9 @@ export default {
    */
   DEFAULT_API_URL,
   /**
-   * Whether this is Stoat
+   * Whether the default host is an official Stoat instance
    */
-  IS_STOAT: [
-    // historically...
-    "https://api.revolt.chat",
-    "https://beta.revolt.chat/api",
-    "https://revolt.chat/api",
-    // ... and now:
-    "https://stoat.chat/api",
-  ].includes(DEFAULT_API_URL),
+  IS_STOAT: isFirstPartyHost(DEFAULT_API_URL),
   /**
    * What WS server to connect to by default.
    */

@@ -1,6 +1,8 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 
+import { BRAND_NAME } from "@revolt/common/lib/branding";
+
 declare let self: ServiceWorkerGlobalScope;
 
 interface ChannelPartial {
@@ -37,19 +39,19 @@ self.addEventListener("push", (event) => {
   if (!notification.title) {
     if (notification.channel) {
       if (notification.channel.channel_type === "DirectMessage") {
-        notification.title = notification.author || "Stoat";
+        notification.title = notification.author || BRAND_NAME;
       } else {
         notification.title = `${notification.author} in ${notification.channel.name}`;
       }
     } else {
-      notification.title = "Stoat";
+      notification.title = BRAND_NAME;
     }
   }
 
   notification.url ||= self.registration.scope;
 
   event.waitUntil(
-    self.registration.showNotification(notification.title || "Stoat", {
+    self.registration.showNotification(notification.title || BRAND_NAME, {
       icon: notification.icon,
       body: notification.body,
       data: notification.url,
