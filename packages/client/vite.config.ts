@@ -12,6 +12,7 @@ import solidSvg from "vite-plugin-solid-svg";
 import codegenPlugin from "./codegen.plugin";
 
 const base = process.env.BASE_PATH ?? "/";
+const brandName = process.env.VITE_BRAND_NAME ?? "Ermine";
 
 export default defineConfig({
   base,
@@ -37,8 +38,8 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        name: "Stoat",
-        short_name: "Stoat",
+        name: brandName,
+        short_name: brandName,
         description: "User-first open source chat platform.",
         categories: ["communication", "chat", "messaging"],
         start_url: base,

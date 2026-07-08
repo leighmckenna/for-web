@@ -5,11 +5,11 @@ import { css } from "styled-system/css";
 
 import { useClientLifecycle } from "@revolt/client";
 import { TransitionType } from "@revolt/client/Controller";
+import { BRAND_NAME } from "@revolt/common";
 import { Navigate } from "@revolt/routing";
 import { Button, Column } from "@revolt/ui";
 
 import { useState } from "@revolt/state";
-import Wordmark from "../../../../public/assets/web/wordmark.svg?component-solid";
 
 /**
  * Flow for logging into an account
@@ -27,13 +27,17 @@ export default function FlowHome() {
           </Show>
 
           <Column gap="xl">
-            <Wordmark
+            <span
               class={css({
-                width: "60%",
                 margin: "auto",
-                fill: "var(--md-sys-color-on-surface)",
+                fontSize: "2.6em",
+                fontWeight: 800,
+                textAlign: "center",
+                color: "var(--md-sys-color-on-surface)",
               })}
-            />
+            >
+              {BRAND_NAME}
+            </span>
 
             <Column>
               <b
@@ -58,8 +62,8 @@ export default function FlowHome() {
               </b>
               <span style={{ "text-align": "center", opacity: "0.5" }}>
                 <Trans>
-                  Stoat is one of the best ways to stay connected with your
-                  friends and community, anywhere, anytime.
+                  {BRAND_NAME} is one of the best ways to stay connected with
+                  your friends and community, anywhere, anytime.
                 </Trans>
               </span>
             </Column>

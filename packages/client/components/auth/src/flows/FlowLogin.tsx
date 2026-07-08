@@ -62,7 +62,9 @@ export default function FlowLogin() {
       <Switch
         fallback={
           <>
-            <FlowTitle subtitle={<Trans>Sign into Stoat</Trans>} emoji="wave">
+            {/* TODO(multi-host): show the instance's own name here once
+                sessions carry per-host configuration */}
+            <FlowTitle subtitle={<Trans>Sign in to continue</Trans>} emoji="wave">
               <Trans>Welcome!</Trans>
             </FlowTitle>
             <Form onSubmit={performLogin}>
