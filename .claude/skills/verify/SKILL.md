@@ -42,6 +42,12 @@ Logged-in surfaces need a real account on the target instance.
   exercised by `pnpm --filter client exec vite build`.
 - `packages/solid-livekit-components` shows as dirty (`-dirty` submodule) after
   its build — never commit it.
-- i18n: changing text inside `<Trans>`/`t` macros changes msgids; existing
-  translations fall back to English until catalogs are re-extracted
-  (`lingui extract`).
+- i18n: changing text inside `<Trans>`/`t` macros changes msgids. **Dev mode
+  falls back to source text and hides breakage — production builds render a
+  raw hash id (e.g. "zAvS8w") for any string missing from the compiled
+  catalogs.** After adding/changing any Trans/t string, run
+  `pnpm --filter client exec lingui extract` and commit the .po files, then
+  verify user-facing strings against `vite build` + `vite preview` (port
+  4173, what CI's e2e drives), not just the dev server.
+- CI note: `gh run watch --exit-status | tail` masks the exit code (pipeline
+  returns tail's). Check the run conclusion explicitly.
