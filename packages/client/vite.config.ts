@@ -17,6 +17,11 @@ const brandName = process.env.VITE_BRAND_NAME ?? "Ermine";
 export default defineConfig({
   base,
   plugins: [
+    {
+      name: "brand-html",
+      transformIndexHtml: (html: string) =>
+        html.replaceAll("%BRAND_NAME%", brandName),
+    },
     Inspect(),
     devtools(),
     codegenPlugin(),
