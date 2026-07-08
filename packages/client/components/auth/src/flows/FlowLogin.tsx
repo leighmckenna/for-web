@@ -64,7 +64,10 @@ export default function FlowLogin() {
           <>
             {/* TODO(multi-host): show the instance's own name here once
                 sessions carry per-host configuration */}
-            <FlowTitle subtitle={<Trans>Sign in to continue</Trans>} emoji="wave">
+            <FlowTitle
+              subtitle={<Trans>Sign in to continue</Trans>}
+              emoji="wave"
+            >
               <Trans>Welcome!</Trans>
             </FlowTitle>
             <Form onSubmit={performLogin}>
