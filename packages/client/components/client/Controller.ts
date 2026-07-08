@@ -140,51 +140,62 @@ export class Lifecycle {
       }
     }
 
-    this.client = new Client({
-      baseURL: this.instanceUrl,
-      autoReconnect: false,
-      syncUnreads: true,
-      debug: import.meta.env.DEV,
-      channelIsMuted: (channel) =>
-        this.#controller.state.notifications.isMuted(channel),
-      channelExclusiveMuted: (channel) =>
-        this.#controller.state.notifications.isChannelMuted(channel),
-    });
-
     // configuration must be present before connect() — the SDK will not
-    // fetch it for existing sessions and falls back to the official ws URL
+    // fetch it for existing sessions and falls back to the official ws URL.
+    // Passing it through the constructor (rather than assigning afterwards)
+    // also flips the SDK's configured() signal, which gates invite-only
+    // and captcha detection in the auth flows.
     const cached = this.#controller.getInstanceConfig(this.instanceUrl);
-    if (cached) {
-      this.client.configuration = cached;
-    } else if (this.instanceUrl === DEFAULT_INSTANCE) {
-      this.client.configuration = {
-        revolt: String(),
-        app: String(),
-        build: {} as never,
-        features: {
-          autumn: {
-            enabled: true,
-            url: CONFIGURATION.DEFAULT_MEDIA_URL,
-          },
-          january: {
-            enabled: true,
-            url: CONFIGURATION.DEFAULT_PROXY_URL,
-          },
-          captcha: {} as never,
-          email: true,
-          invite_only: false,
-          livekit: {
-            enabled: false,
-            nodes: [],
-          },
-          legal_links: {} as never,
-          limits: {} as never,
-        },
-        vapid: String(),
-        ws: CONFIGURATION.DEFAULT_WS_URL,
-      };
-    }
-    // otherwise leave unset; #connect() fetches it before opening the socket
+    const configuration =
+      cached ??
+      (this.instanceUrl === DEFAULT_INSTANCE
+        ? {
+            revolt: String(),
+            app: String(),
+            build: {} as never,
+            features: {
+              autumn: {
+                enabled: true,
+                url: CONFIGURATION.DEFAULT_MEDIA_URL,
+              },
+              january: {
+                enabled: true,
+                url: CONFIGURATION.DEFAULT_PROXY_URL,
+              },
+              captcha: (CONFIGURATION.HCAPTCHA_SITEKEY
+                ? {
+                    enabled: true,
+                    key: CONFIGURATION.HCAPTCHA_SITEKEY,
+                  }
+                : {}) as never,
+              email: true,
+              invite_only: false,
+              livekit: {
+                enabled: false,
+                nodes: [],
+              },
+              legal_links: {} as never,
+              limits: {} as never,
+            },
+            vapid: String(),
+            ws: CONFIGURATION.DEFAULT_WS_URL,
+          }
+        : // unknown instance: the SDK fetches it, #connect() awaits it too
+          undefined);
+
+    this.client = new Client(
+      {
+        baseURL: this.instanceUrl,
+        autoReconnect: false,
+        syncUnreads: true,
+        debug: import.meta.env.DEV,
+        channelIsMuted: (channel) =>
+          this.#controller.state.notifications.isMuted(channel),
+        channelExclusiveMuted: (channel) =>
+          this.#controller.state.notifications.isChannelMuted(channel),
+      },
+      configuration,
+    );
 
     this.client.events.on("state", this.onState);
     this.client.on("ready", this.onReady);
@@ -573,11 +584,6 @@ export default class ClientController {
   #apis = new Map<string, API.API>();
 
   /**
-   * Configurations for instances being added that have no stored session yet
-   */
-  #pendingConfigs = new Map<string, API.RevoltConfig>();
-
-  /**
    * A memo to prevent isLoggedIn from bouncing when reconnecting
    */
   private isLoggedInState: Accessor<boolean>;
@@ -655,12 +661,10 @@ export default class ClientController {
   }
 
   /**
-   * Best known configuration for an instance (stored, or pending add).
+   * Best known configuration for an instance.
    */
   getInstanceConfig(instance: string): API.RevoltConfig | undefined {
-    return (
-      this.state.auth.getConfig(instance) ?? this.#pendingConfigs.get(instance)
-    );
+    return this.state.auth.getConfig(instance);
   }
 
   getCurrentClient() {
@@ -701,11 +705,12 @@ export default class ClientController {
 
   /**
    * Register a newly discovered instance and switch to it; the login
-   * flow then operates against it (its configuration is kept pending
-   * until a session is stored).
+   * flow then operates against it. The instance (and its configuration)
+   * is persisted immediately so a page reload cannot silently fall back
+   * to the default instance mid-signup.
    */
   addInstance(discovered: DiscoveredInstance) {
-    this.#pendingConfigs.set(discovered.apiUrl, discovered.config);
+    this.state.auth.addInstance(discovered.apiUrl, discovered.config);
     this.switchInstance(discovered.apiUrl);
   }
 
@@ -790,12 +795,7 @@ export default class ClientController {
       valid: false,
     };
 
-    this.state.auth.setSession(
-      instance,
-      createdSession,
-      this.#pendingConfigs.get(instance),
-    );
-    this.#pendingConfigs.delete(instance);
+    this.state.auth.setSession(instance, createdSession);
 
     this.lifecycleFor(instance).transition({
       type: TransitionType.LoginUncached,

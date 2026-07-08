@@ -5,8 +5,8 @@ import { PublicChannelInvite } from "stoat.js";
 import { css, cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
-import { IS_DEV, useClient } from "@revolt/client";
-import { CONFIGURATION } from "@revolt/common";
+import { IS_DEV, useClient, useIsFirstPartyInstance } from "@revolt/client";
+import { BRAND_NAME } from "@revolt/common";
 import { useModals } from "@revolt/modal";
 import { useNavigate } from "@revolt/routing";
 import {
@@ -25,8 +25,6 @@ import MdHome from "@material-design-icons/svg/filled/home.svg?component-solid";
 import MdPayments from "@material-design-icons/svg/filled/payments.svg?component-solid";
 import MdRateReview from "@material-design-icons/svg/filled/rate_review.svg?component-solid";
 import MdSettings from "@material-design-icons/svg/filled/settings.svg?component-solid";
-
-import Wordmark from "../../public/assets/web/wordmark.svg?component-solid";
 
 import { HeaderIcon } from "./common/CommonHeader";
 
@@ -97,9 +95,9 @@ export function HomePage() {
   const navigate = useNavigate();
   const client = useClient();
 
-  // check if we're stoat.chat; if so, check if the user is in the Lounge
-  const showLoungeButton = CONFIGURATION.IS_STOAT;
-  const isInLounge =
+  // check if we're on stoat.chat; if so, check if the user is in the Lounge
+  const showLoungeButton = useIsFirstPartyInstance();
+  const isInLounge = () =>
     client()!.servers.get("01F7ZSBSFHQ8TA81725KQCSDDP") !== undefined;
 
   return (
@@ -112,12 +110,15 @@ export function HomePage() {
       </Header>
       <div use:scrollable={{ class: content() }}>
         <Column>
-          <Wordmark
+          <span
             class={css({
-              width: "160px",
-              fill: "var(--md-sys-color-on-surface)",
+              fontSize: "2.4em",
+              fontWeight: 800,
+              color: "var(--md-sys-color-on-surface)",
             })}
-          />
+          >
+            {BRAND_NAME}
+          </span>
         </Column>
         <Buttons>
           <SeparatedColumn>
@@ -139,7 +140,7 @@ export function HomePage() {
               <Trans>Create a group or server</Trans>
             </CategoryButton>
             <Switch fallback={null}>
-              <Match when={showLoungeButton && isInLounge}>
+              <Match when={showLoungeButton() && isInLounge()}>
                 <CategoryButton
                   onClick={() => navigate("/server/01F7ZSBSFHQ8TA81725KQCSDDP")}
                   description={
@@ -153,7 +154,7 @@ export function HomePage() {
                   <Trans>Go to the Stoat Lounge</Trans>
                 </CategoryButton>
               </Match>
-              <Match when={showLoungeButton && !isInLounge}>
+              <Match when={showLoungeButton() && !isInLounge()}>
                 <CategoryButton
                   onClick={() => {
                     client()
@@ -175,19 +176,21 @@ export function HomePage() {
                 </CategoryButton>
               </Match>
             </Switch>
-            <CategoryButton
-              variant="tertiary"
-              onClick={() => window.open("https://ko-fi.com/stoatchat")}
-              description={
-                <Trans>Support the project by donating - thank you!</Trans>
-              }
-              icon={<MdPayments />}
-            >
-              <Trans>Donate to Stoat</Trans>
-            </CategoryButton>
+            <Show when={showLoungeButton()}>
+              <CategoryButton
+                variant="tertiary"
+                onClick={() => window.open("https://ko-fi.com/stoatchat")}
+                description={
+                  <Trans>Support the project by donating - thank you!</Trans>
+                }
+                icon={<MdPayments />}
+              >
+                <Trans>Donate to Stoat</Trans>
+              </CategoryButton>
+            </Show>
           </SeparatedColumn>
           <SeparatedColumn>
-            <Show when={CONFIGURATION.IS_STOAT}>
+            <Show when={showLoungeButton()}>
               <CategoryButton
                 onClick={() => navigate("/discover")}
                 description={
@@ -200,23 +203,26 @@ export function HomePage() {
                 <Trans>Discover Stoat</Trans>
               </CategoryButton>
             </Show>
-            <CategoryButton
-              onClick={() =>
-                openModal({
-                  type: "settings",
-                  config: "user",
-                  context: { page: "feedback" },
-                })
-              }
-              description={
-                <Trans>
-                  Let us know how we can improve our app by giving us feedback.
-                </Trans>
-              }
-              icon={<MdRateReview {...iconSize(22)} />}
-            >
-              <Trans>Give feedback on Stoat</Trans>
-            </CategoryButton>
+            <Show when={showLoungeButton()}>
+              <CategoryButton
+                onClick={() =>
+                  openModal({
+                    type: "settings",
+                    config: "user",
+                    context: { page: "feedback" },
+                  })
+                }
+                description={
+                  <Trans>
+                    Let us know how we can improve our app by giving us
+                    feedback.
+                  </Trans>
+                }
+                icon={<MdRateReview {...iconSize(22)} />}
+              >
+                <Trans>Give feedback on Stoat</Trans>
+              </CategoryButton>
+            </Show>
             <CategoryButton
               onClick={() => openModal({ type: "settings", config: "user" })}
               description={

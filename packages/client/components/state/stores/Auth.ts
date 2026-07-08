@@ -14,10 +14,11 @@ export type Session = {
 };
 
 /**
- * Everything we know about an instance the user has signed into.
+ * Everything we know about an instance the user has signed into
+ * (or is in the middle of signing into — then without a session yet).
  */
 export type InstanceRecord = {
-  session: Session;
+  session?: Session;
   /**
    * The instance's self-reported configuration (`GET /` on its API),
    * cached so clients can be constructed synchronously before connect.
@@ -107,9 +108,14 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
 
     if (typeof input.sessions === "object") {
       for (const [url, record] of Object.entries(input.sessions ?? {})) {
+        if (typeof url !== "string" || !url) continue;
+
         const session = cleanSession(record?.session);
-        if (typeof url === "string" && url && session) {
+        if (session) {
           sessions[url] = { session, config: record.config };
+        } else if (typeof record?.config === "object") {
+          // known instance pending its first login
+          sessions[url] = { config: record.config };
         }
       }
     }
@@ -149,7 +155,22 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
     const data = this.get();
     if (data.activeInstance && data.sessions[data.activeInstance])
       return data.activeInstance;
-    return Object.keys(data.sessions)[0];
+    // prefer an instance we actually have a session for
+    return (
+      Object.keys(data.sessions).find((url) => data.sessions[url].session) ??
+      Object.keys(data.sessions)[0]
+    );
+  }
+
+  /**
+   * Remember an instance (with its configuration) before any login.
+   */
+  addInstance(instance: string, config: API.RevoltConfig) {
+    if (!this.get().sessions[instance]) {
+      this.set("sessions", instance, { config });
+    } else {
+      this.set("sessions", instance, "config", config);
+    }
   }
 
   /**
@@ -203,7 +224,7 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
    */
   markValid(instance: string) {
     const record = this.get().sessions[instance];
-    if (record && !record.session.valid) {
+    if (record?.session && !record.session.valid) {
       this.set("sessions", instance, "session", "valid", true);
     }
   }

@@ -65,12 +65,25 @@ export default function FlowCreate() {
     return false;
   };
 
+  /**
+   * Captcha site key for the active instance; fall back to the
+   * build-time key unless the instance explicitly states captcha's
+   * status in its configuration.
+   */
+  const captchaSiteKey = () => {
+    const captcha = getClient().configuration?.features.captcha;
+    if (captcha && typeof captcha.enabled === "boolean") {
+      return captcha.enabled ? captcha.key : undefined;
+    }
+    return CONFIGURATION.HCAPTCHA_SITEKEY;
+  };
+
   return (
     <>
       <FlowTitle subtitle={<Trans>Create an account</Trans>} emoji="wave">
         <Trans>Hello!</Trans>
       </FlowTitle>
-      <Form onSubmit={create} captcha={CONFIGURATION.HCAPTCHA_SITEKEY}>
+      <Form onSubmit={create} captcha={captchaSiteKey()}>
         <Fields fields={["email", "new-password"]} />
         <Show when={isInviteOnly()}>
           <Fields fields={[{ field: "invite", value: code }]} />
