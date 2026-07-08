@@ -42,6 +42,10 @@ msgstr ""
 msgid "(changes are being saved…)"
 msgstr ""
 
+#: components/modal/modals/SwitchInstance.tsx
+msgid "(current)"
+msgstr ""
+
 #. placeholder {0}: props.count
 #: components/ui/components/features/messaging/elements/BlockedMessage.tsx
 msgid "{0, plural, one {# blocked message} other {# blocked messages}}"
@@ -150,6 +154,10 @@ msgstr ""
 #. placeholder {0}: props.member.displayName
 #: components/modal/modals/UserProfileRoles.tsx
 msgid "{0}'s roles"
+msgstr ""
+
+#: components/auth/src/flows/FlowHome.tsx
+msgid "{BRAND_NAME} is one of the best ways to stay connected with your friends and community, anywhere, anytime."
 msgstr ""
 
 #: src/interface/channels/text/Composition.tsx
@@ -356,6 +364,11 @@ msgstr ""
 msgid "Add a new friend"
 msgstr ""
 
+#: components/modal/modals/SwitchInstance.tsx
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "Add an instance"
+msgstr ""
+
 #: components/app/menus/UserContextMenu.tsx
 msgid "Add friend"
 msgstr "o pana e ona tawa lipu pi jan pona"
@@ -402,6 +415,10 @@ msgstr ""
 #: components/app/menus/shared/NotificationContextMenu.tsx
 msgid "All Messages"
 msgstr "toki ale"
+
+#: src/LoadingScreen.tsx
+msgid "All Systems Operational"
+msgstr ""
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Allow members to change name and avatar per-message"
@@ -489,6 +506,7 @@ msgstr "sitelen jan"
 #: src/interface/channels/AgeGate.tsx
 #: components/modal/modals/MFAFlow.tsx
 #: components/auth/src/flows/FlowLogin.tsx
+#: components/auth/src/flows/FlowInstance.tsx
 #: components/auth/src/flows/FlowCreate.tsx
 #: components/auth/src/flows/FlowCheck.tsx
 #: components/app/interface/settings/user/_AccountCard.tsx
@@ -723,6 +741,10 @@ msgstr "poki toki"
 msgid "Chat Input"
 msgstr ""
 
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "chat.example.com or an invite link"
+msgstr ""
+
 #: components/auth/src/flows/FlowCheck.tsx
 msgid "Check your mail!"
 msgstr "o lukin e ilo Email sina!"
@@ -762,6 +784,7 @@ msgstr "nasin ilo ilo"
 #: components/modal/modals/UserProfileRoles.tsx
 #: components/modal/modals/UserProfileMutualGroups.tsx
 #: components/modal/modals/UserProfileMutualFriends.tsx
+#: components/modal/modals/SwitchInstance.tsx
 #: components/modal/modals/ServerInfo.tsx
 #: components/modal/modals/PolicyChange.tsx
 #: components/modal/modals/LinkWarning.tsx
@@ -821,8 +844,13 @@ msgstr ""
 msgid "Confirm action"
 msgstr ""
 
+#: components/auth/src/flows/FlowInstance.tsx
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Connect"
+msgstr ""
+
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "Connect to a self-hosted server"
 msgstr ""
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
@@ -1106,6 +1134,10 @@ msgstr ""
 #~ msgid "Defean"
 #~ msgstr ""
 
+#: src/LoadingScreen.tsx
+msgid "Degraded Performance"
+msgstr ""
+
 #: components/modal/modals/EmojiPreview.tsx
 #: components/modal/modals/DeleteServer.tsx
 #: components/modal/modals/DeleteRole.tsx
@@ -1272,6 +1304,10 @@ msgstr ""
 msgid "Drugs or illegal goods"
 msgstr ""
 
+#: components/modal/modals/SwitchInstance.tsx
+msgid "Each instance has its own account and communities."
+msgstr ""
+
 #. placeholder {0}: props.member.displayName
 #: components/modal/modals/UserProfileRoles.tsx
 msgid "Edit {0}'s roles"
@@ -1398,6 +1434,10 @@ msgstr "ni li pona tawa mi"
 msgid "Enter Code"
 msgstr ""
 
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "Enter the domain of the instance, or paste an invite link from it. Your account on this instance stays signed in — each instance has its own accounts."
+msgstr ""
+
 #: components/auth/src/flows/Form.tsx
 msgid "Enter your current password."
 msgstr "o sitelen e nimi open pi tenpo ni."
@@ -1429,8 +1469,12 @@ msgid "Extreme violence, gore or animal cruelty"
 msgstr ""
 
 #: components/client/NotificationsController.ts
-msgid "Failed to enable notifications. Stoat does not have notification permission."
+msgid "Failed to enable notifications. {BRAND_NAME} does not have notification permission."
 msgstr ""
+
+#: components/client/NotificationsController.ts
+#~ msgid "Failed to enable notifications. Stoat does not have notification permission."
+#~ msgstr ""
 
 #: components/client/NotificationsController.ts
 msgid "Failed to enable push notifications. Please try again later."
@@ -1669,6 +1713,14 @@ msgstr ""
 msgid "In the meantime, install Stoat from Google Play for a faster, smoother experience designed for Android."
 msgstr ""
 
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "Instance"
+msgstr ""
+
+#: components/modal/modals/SwitchInstance.tsx
+msgid "Instances"
+msgstr ""
+
 #: components/app/interface/settings/user/Native.tsx
 msgid "Instead of closing, Stoat will hide in your tray."
 msgstr ""
@@ -1871,6 +1923,14 @@ msgstr "o kama sijelo"
 
 #: components/app/interface/settings/user/Sessions.tsx
 msgid "Logs you out of all sessions except this device."
+msgstr ""
+
+#: components/auth/src/flows/FlowInstance.tsx
+msgid "Looking for the instance…"
+msgstr ""
+
+#: src/LoadingScreen.tsx
+msgid "Major Outage"
 msgstr ""
 
 #: components/modal/modals/ReportContent.tsx
@@ -2214,6 +2274,10 @@ msgstr "weka li lon tenpo ale. ona li ken ala lon sin."
 msgid "One of the first 1000 users!"
 msgstr ""
 
+#: src/LoadingScreen.tsx
+msgid "Ongoing Maintenance"
+msgstr ""
+
 #: src/interface/Friends.tsx
 #: src/interface/navigation/servers/UserMenu.tsx
 #: src/interface/navigation/channels/HomeSidebar.tsx
@@ -2266,6 +2330,10 @@ msgstr "ijo suli"
 
 #: components/app/interface/settings/server/bans/ListBans.tsx
 msgid "Pardon User"
+msgstr ""
+
+#: src/LoadingScreen.tsx
+msgid "Partial Outage"
 msgstr ""
 
 #: components/modal/modals/MFAFlow.tsx
@@ -2821,9 +2889,18 @@ msgstr ""
 msgid "Show send message button"
 msgstr ""
 
+#. placeholder {0}: instanceHost()
 #: components/auth/src/flows/FlowLogin.tsx
-msgid "Sign into Stoat"
+msgid "Sign in to {0}"
 msgstr ""
+
+#: components/auth/src/flows/FlowLogin.tsx
+msgid "Sign in to continue"
+msgstr ""
+
+#: components/auth/src/flows/FlowLogin.tsx
+#~ msgid "Sign into Stoat"
+#~ msgstr ""
 
 #: components/auth/src/flows/FlowHome.tsx
 msgid "Sign Up"
@@ -2923,8 +3000,8 @@ msgid "Stoat Founder"
 msgstr ""
 
 #: components/auth/src/flows/FlowHome.tsx
-msgid "Stoat is one of the best ways to stay connected with your friends and community, anywhere, anytime."
-msgstr ""
+#~ msgid "Stoat is one of the best ways to stay connected with your friends and community, anywhere, anytime."
+#~ msgstr ""
 
 #: components/app/interface/settings/user/Native.tsx
 msgid "Stoat will start in the system tray."
@@ -3080,6 +3157,10 @@ msgstr ""
 msgid "This has already been sent."
 msgstr ""
 
+#: src/LoadingScreen.tsx
+msgid "This is taking longer than usual."
+msgstr ""
+
 #: components/ui/components/features/messaging/elements/ConversationStart.tsx
 msgid "This is the start of your conversation."
 msgstr "ni li open pi toki sina."
@@ -3156,6 +3237,10 @@ msgstr ""
 msgid "Trending GIFs"
 msgstr ""
 
+#: src/LoadingScreen.tsx
+msgid "Troubleshooting"
+msgstr ""
+
 #: components/app/menus/UserContextMenu.tsx
 msgid "Unblock user"
 msgstr "o ken toki tawa jan ni"
@@ -3168,6 +3253,10 @@ msgstr ""
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
 #: components/app/interface/settings/user/notifications/Sounds.tsx
 msgid "Undeafen"
+msgstr ""
+
+#: src/LoadingScreen.tsx
+msgid "Unknown"
 msgstr ""
 
 #: components/markdown/plugins/anchors.tsx
@@ -3227,6 +3316,10 @@ msgstr ""
 
 #: components/modal/modals/JoinServer.tsx
 msgid "Use a code or invite link"
+msgstr ""
+
+#: components/auth/src/flows/FlowHome.tsx
+msgid "Use a self-hosted server"
 msgstr ""
 
 #: components/app/interface/settings/user/Native.tsx
@@ -3311,6 +3404,11 @@ msgstr ""
 #~ msgid "Using default speaker"
 #~ msgstr ""
 
+#. placeholder {0}: instanceHost()
+#: components/auth/src/flows/FlowHome.tsx
+msgid "Using instance {0}"
+msgstr ""
+
 #: src/interface/navigation/channels/ServerSidebar.tsx
 msgid "Verified"
 msgstr ""
@@ -3350,6 +3448,10 @@ msgstr ""
 
 #: components/app/interface/settings/user/Account.tsx
 msgid "View Recovery Codes"
+msgstr ""
+
+#: src/LoadingScreen.tsx
+msgid "View status page"
 msgstr ""
 
 #: components/ui/components/features/messaging/bars/JumpToBottom.tsx
@@ -3539,6 +3641,10 @@ msgstr ""
 msgid "You have this user blocked."
 msgstr ""
 
+#: src/LoadingScreen.tsx
+msgid "You may be experiencing connection issues."
+msgstr ""
+
 #: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
 msgid "You muted this user."
 msgstr ""
@@ -3578,7 +3684,11 @@ msgid "You've been invited to join this server.<0/>Would you like to join?"
 msgstr ""
 
 #: components/modal/modals/SignedOut.tsx
-msgid "You've been signed out of Stoat!"
+#~ msgid "You've been signed out of Stoat!"
+#~ msgstr ""
+
+#: components/modal/modals/SignedOut.tsx
+msgid "You've been signed out!"
 msgstr ""
 
 #: components/i18n/errors.tsx
