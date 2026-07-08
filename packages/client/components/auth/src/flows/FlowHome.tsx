@@ -3,8 +3,9 @@ import { Match, Show, Switch } from "solid-js";
 import { Trans } from "@lingui-solid/solid/macro";
 import { css } from "styled-system/css";
 
-import { useClientLifecycle } from "@revolt/client";
+import { useClientController, useClientLifecycle } from "@revolt/client";
 import { TransitionType } from "@revolt/client/Controller";
+import { DEFAULT_INSTANCE } from "@revolt/client/instances";
 import { BRAND_NAME } from "@revolt/common";
 import { Navigate } from "@revolt/routing";
 import { Button, Column } from "@revolt/ui";
@@ -17,6 +18,15 @@ import { useState } from "@revolt/state";
 export default function FlowHome() {
   const state = useState();
   const { lifecycle, isLoggedIn, isError } = useClientLifecycle();
+  const controller = useClientController();
+
+  /**
+   * Host name of the active instance, if it isn't this build's default
+   */
+  const instanceHost = () => {
+    const active = controller.activeInstance();
+    return active === DEFAULT_INSTANCE ? undefined : new URL(active).host;
+  };
 
   return (
     <Switch
@@ -69,6 +79,11 @@ export default function FlowHome() {
             </Column>
 
             <Column>
+              <Show when={instanceHost()}>
+                <span style={{ "text-align": "center", opacity: "0.5" }}>
+                  <Trans>Using instance {instanceHost()}</Trans>
+                </span>
+              </Show>
               <a href="/login/auth">
                 <Column>
                   <Button>
@@ -80,6 +95,13 @@ export default function FlowHome() {
                 <Column>
                   <Button variant="tonal">
                     <Trans>Sign Up</Trans>
+                  </Button>
+                </Column>
+              </a>
+              <a href="/login/instance">
+                <Column>
+                  <Button variant="text">
+                    <Trans>Use a self-hosted server</Trans>
                   </Button>
                 </Column>
               </a>

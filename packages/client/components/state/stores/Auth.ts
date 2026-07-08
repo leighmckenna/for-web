@@ -1,3 +1,5 @@
+import type { API } from "stoat.js";
+
 import { CONFIGURATION } from "@revolt/common";
 
 import { State } from "..";
@@ -11,12 +13,56 @@ export type Session = {
   valid: boolean;
 };
 
+/**
+ * Everything we know about an instance the user has signed into
+ * (or is in the middle of signing into — then without a session yet).
+ */
+export type InstanceRecord = {
+  session?: Session;
+  /**
+   * The instance's self-reported configuration (`GET /` on its API),
+   * cached so clients can be constructed synchronously before connect.
+   * Absent for the default instance, which falls back to build-time URLs.
+   */
+  config?: API.RevoltConfig;
+};
+
 export type TypeAuth = {
   /**
-   * Session information
+   * Sessions keyed by canonical instance API URL
+   */
+  sessions: Record<string, InstanceRecord>;
+
+  /**
+   * Instance the interface is currently signed into
+   */
+  activeInstance?: string;
+
+  /**
+   * Session information (legacy single-instance shape, migrated by clean())
    */
   session?: Session;
 };
+
+/**
+ * Validate a session-shaped object.
+ */
+function cleanSession(input?: Partial<Session>): Session | undefined {
+  if (
+    typeof input === "object" &&
+    typeof input?._id === "string" &&
+    typeof input.token === "string" &&
+    typeof input.userId === "string" &&
+    input.valid
+  ) {
+    return {
+      _id: input._id,
+      token: input.token,
+      userId: input.userId,
+      valid: true,
+    };
+  }
+}
 
 /**
  * Authentication details store
@@ -35,7 +81,7 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
    */
   hydrate(): void {
     if (CONFIGURATION.DEVELOPMENT_TOKEN && CONFIGURATION.DEVELOPMENT_USER_ID) {
-      this.setSession({
+      this.setSession(CONFIGURATION.DEFAULT_API_URL, {
         _id: CONFIGURATION.DEVELOPMENT_SESSION_ID ?? "0",
         token: CONFIGURATION.DEVELOPMENT_TOKEN,
         userId: CONFIGURATION.DEVELOPMENT_USER_ID,
@@ -49,7 +95,8 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
    */
   default(): TypeAuth {
     return {
-      session: undefined,
+      sessions: {},
+      activeInstance: undefined,
     };
   }
 
@@ -57,58 +104,128 @@ export class Auth extends AbstractStore<"auth", TypeAuth> {
    * Validate the given data to see if it is compliant and return a compliant object
    */
   clean(input: Partial<TypeAuth>): TypeAuth {
-    let session;
-    if (typeof input.session === "object") {
-      if (
-        typeof input.session._id === "string" &&
-        typeof input.session.token === "string" &&
-        typeof input.session.userId === "string" &&
-        input.session.valid
-      ) {
-        session = {
-          _id: input.session._id,
-          token: input.session.token,
-          userId: input.session.userId,
-          valid: true,
-        };
+    const sessions: Record<string, InstanceRecord> = {};
+
+    if (typeof input.sessions === "object") {
+      for (const [url, record] of Object.entries(input.sessions ?? {})) {
+        if (typeof url !== "string" || !url) continue;
+
+        const session = cleanSession(record?.session);
+        if (session) {
+          sessions[url] = { session, config: record.config };
+        } else if (typeof record?.config === "object") {
+          // known instance pending its first login
+          sessions[url] = { config: record.config };
+        }
       }
     }
 
+    // migrate the legacy single-session shape onto the default instance
+    const legacy = cleanSession(input.session);
+    if (legacy && !sessions[CONFIGURATION.DEFAULT_API_URL]) {
+      sessions[CONFIGURATION.DEFAULT_API_URL] = { session: legacy };
+    }
+
+    let activeInstance =
+      typeof input.activeInstance === "string"
+        ? input.activeInstance
+        : undefined;
+    if (!activeInstance || !sessions[activeInstance]) {
+      activeInstance = Object.keys(sessions)[0];
+    }
+
     return {
-      session,
+      sessions,
+      activeInstance,
     };
   }
 
   /**
-   * Get current session.
+   * All instances with stored sessions.
+   * @returns Canonical instance API URLs
+   */
+  getInstances(): string[] {
+    return Object.keys(this.get().sessions);
+  }
+
+  /**
+   * Get the instance the interface should sign into.
+   */
+  getActiveInstance(): string | undefined {
+    const data = this.get();
+    if (data.activeInstance && data.sessions[data.activeInstance])
+      return data.activeInstance;
+    // prefer an instance we actually have a session for
+    return (
+      Object.keys(data.sessions).find((url) => data.sessions[url].session) ??
+      Object.keys(data.sessions)[0]
+    );
+  }
+
+  /**
+   * Remember an instance (with its configuration) before any login.
+   */
+  addInstance(instance: string, config: API.RevoltConfig) {
+    if (!this.get().sessions[instance]) {
+      this.set("sessions", instance, { config });
+    } else {
+      this.set("sessions", instance, "config", config);
+    }
+  }
+
+  /**
+   * Set the instance the interface is signed into.
+   */
+  setActiveInstance(instance: string) {
+    this.set("activeInstance", instance);
+  }
+
+  /**
+   * Get the session for an instance.
+   * @param instance Instance API URL (defaults to the active instance)
    * @returns Session
    */
-  getSession() {
-    return this.get().session;
+  getSession(instance?: string) {
+    const url = instance ?? this.getActiveInstance();
+    return url ? this.get().sessions[url]?.session : undefined;
   }
 
   /**
-   * Add a new session to the auth manager.
-   * @param session Session
+   * Get the cached configuration for an instance.
    */
-  setSession(session: Session) {
-    this.set("session", session);
+  getConfig(instance: string): API.RevoltConfig | undefined {
+    return this.get().sessions[instance]?.config;
   }
 
   /**
-   * Remove existing session.
+   * Store a session (and optionally the instance's configuration).
    */
-  removeSession() {
-    this.set("session", undefined!);
+  setSession(instance: string, session: Session, config?: API.RevoltConfig) {
+    this.set("sessions", instance, {
+      session,
+      config: config ?? this.get().sessions[instance]?.config,
+    });
+    this.set("activeInstance", instance);
   }
 
   /**
-   * Mark current session as valid
+   * Remove the session for an instance.
    */
-  markValid() {
-    const session = this.get().session;
-    if (session && !session.valid) {
-      this.set("session", "valid", true);
+  removeSession(instance: string) {
+    this.set("sessions", instance, undefined!);
+
+    if (this.get().activeInstance === instance) {
+      this.set("activeInstance", Object.keys(this.get().sessions)[0]!);
+    }
+  }
+
+  /**
+   * Mark an instance's session as valid
+   */
+  markValid(instance: string) {
+    const record = this.get().sessions[instance];
+    if (record?.session && !record.session.valid) {
+      this.set("sessions", instance, "session", "valid", true);
     }
   }
 }

@@ -4,11 +4,12 @@ import { detect } from "detect-browser";
 import { API, Client, ConnectionState } from "stoat.js";
 import { ProtocolV1 } from "stoat.js/lib/events/v1";
 
-import { CONFIGURATION } from "@revolt/common";
+import { BRAND_NAME, CONFIGURATION } from "@revolt/common";
 import { ModalControllerExtended } from "@revolt/modal";
 import type { State as ApplicationState } from "@revolt/state";
 import type { Session } from "@revolt/state/stores/Auth";
 import { killServiceWorkerSubscription } from "./NotificationsController";
+import { type DiscoveredInstance, DEFAULT_INSTANCE } from "./instances";
 
 export enum State {
   Ready = "Ready",
@@ -40,6 +41,9 @@ export enum TransitionType {
   Ready = "ready",
   Retry = "retry",
   Logout = "logout",
+  /** Disconnect and reset without invalidating the stored session
+   *  (used when switching to another instance) */
+  Suspend = "suspend",
 }
 
 export type Transition =
@@ -65,7 +69,8 @@ export type Transition =
         | TransitionType.Retry
         | TransitionType.Dispose
         | TransitionType.DisposeOnly
-        | TransitionType.Logout;
+        | TransitionType.Logout
+        | TransitionType.Suspend;
     };
 
 type PolicyAttentionRequired = [
@@ -73,8 +78,9 @@ type PolicyAttentionRequired = [
   () => Promise<void>,
 ];
 
-class Lifecycle {
+export class Lifecycle {
   #controller: ClientController;
+  readonly instanceUrl: string;
 
   readonly state: Accessor<State>;
   #setStateSetter: Setter<State>;
@@ -92,9 +98,11 @@ class Lifecycle {
   #connectionFailures = 0;
   #permanentError: string | undefined;
   #retryTimeout: number | undefined;
+  #remoteLogout = false;
 
-  constructor(controller: ClientController) {
+  constructor(controller: ClientController, instanceUrl: string) {
     this.#controller = controller;
+    this.instanceUrl = instanceUrl;
 
     this.onState = this.onState.bind(this);
     this.onReady = this.onReady.bind(this);
@@ -116,60 +124,112 @@ class Lifecycle {
     this.#policyAttentionRequired = setPolicyAttentionRequired;
 
     this.client = null!;
-    this.dispose();
+    this.dispose(false);
   }
 
-  private dispose() {
+  private dispose(remoteLogout: boolean) {
     if (this.client) {
-      this.client.logout();
+      if (remoteLogout) {
+        // invalidates the session server-side and tears the socket down
+        this.client.logout();
+      } else {
+        // tear down locally, keeping the stored session usable
+        this.client.events.removeAllListeners();
+        this.client.removeAllListeners();
+        this.client.events.disconnect();
+      }
     }
 
-    this.client = new Client({
-      baseURL: CONFIGURATION.DEFAULT_API_URL,
-      autoReconnect: false,
-      syncUnreads: true,
-      debug: import.meta.env.DEV,
-      channelIsMuted: (channel) =>
-        this.#controller.state.notifications.isMuted(channel),
-      channelExclusiveMuted: (channel) =>
-        this.#controller.state.notifications.isChannelMuted(channel),
-    });
+    // configuration must be present before connect() — the SDK will not
+    // fetch it for existing sessions and falls back to the official ws URL.
+    // Passing it through the constructor (rather than assigning afterwards)
+    // also flips the SDK's configured() signal, which gates invite-only
+    // and captcha detection in the auth flows.
+    const cached = this.#controller.getInstanceConfig(this.instanceUrl);
+    const configuration =
+      cached ??
+      (this.instanceUrl === DEFAULT_INSTANCE
+        ? {
+            revolt: String(),
+            app: String(),
+            build: {} as never,
+            features: {
+              autumn: {
+                enabled: true,
+                url: CONFIGURATION.DEFAULT_MEDIA_URL,
+              },
+              january: {
+                enabled: true,
+                url: CONFIGURATION.DEFAULT_PROXY_URL,
+              },
+              captcha: (CONFIGURATION.HCAPTCHA_SITEKEY
+                ? {
+                    enabled: true,
+                    key: CONFIGURATION.HCAPTCHA_SITEKEY,
+                  }
+                : {}) as never,
+              email: true,
+              invite_only: false,
+              livekit: {
+                enabled: false,
+                nodes: [],
+              },
+              legal_links: {} as never,
+              limits: {} as never,
+            },
+            vapid: String(),
+            ws: CONFIGURATION.DEFAULT_WS_URL,
+          }
+        : // unknown instance: the SDK fetches it, #connect() awaits it too
+          undefined);
 
-    this.client.configuration = {
-      revolt: String(),
-      app: String(),
-      build: {} as never,
-      features: {
-        autumn: {
-          enabled: true,
-          url: CONFIGURATION.DEFAULT_MEDIA_URL,
-        },
-        january: {
-          enabled: true,
-          url: CONFIGURATION.DEFAULT_PROXY_URL,
-        },
-        captcha: {} as never,
-        email: true,
-        invite_only: false,
-        livekit: {
-          enabled: false,
-          nodes: [],
-        },
-        legal_links: {} as never,
-        limits: {} as never,
+    this.client = new Client(
+      {
+        baseURL: this.instanceUrl,
+        autoReconnect: false,
+        syncUnreads: true,
+        debug: import.meta.env.DEV,
+        channelIsMuted: (channel) =>
+          this.#controller.state.notifications.isMuted(channel),
+        channelExclusiveMuted: (channel) =>
+          this.#controller.state.notifications.isChannelMuted(channel),
       },
-      vapid: String(),
-      ws: CONFIGURATION.DEFAULT_WS_URL,
-    };
+      configuration,
+    );
 
     this.client.events.on("state", this.onState);
     this.client.on("ready", this.onReady);
     this.client.on("policyChanges", this.onPolicyChanges);
   }
 
+  /**
+   * Open the socket, fetching instance configuration first if we
+   * don't have it yet (the SDK requires it for the ws URL).
+   */
+  #connect() {
+    if (this.client.configuration) {
+      this.client.connect();
+    } else {
+      this.client.api
+        .get("/")
+        .then((configuration) => {
+          this.client.configuration = configuration;
+          this.client.connect();
+        })
+        .catch(() =>
+          this.transition({ type: TransitionType.TemporaryFailure }),
+        );
+    }
+  }
+
   #enter(nextState: State) {
     if (import.meta.env.DEV) {
-      console.info("[lifecycle] entering state", nextState);
+      console.info(
+        "[lifecycle]",
+        this.instanceUrl,
+        "entering state",
+        nextState,
+      );
     }
 
     this.#setStateSetter(nextState);
@@ -188,22 +248,23 @@ class Lifecycle {
               type: TransitionType.NoUser,
             });
           } else {
-            this.client.connect();
+            this.#connect();
           }
         });
 
         break;
       case State.Connecting:
       case State.Reconnecting:
-        this.client.connect();
+        this.#connect();
         break;
       case State.Connected:
-        this.#controller.state.auth.markValid();
+        this.#controller.state.auth.markValid(this.instanceUrl);
         this.#setLoadedOnce(true);
         this.#connectionFailures = 0;
         break;
       case State.Dispose:
-        this.dispose();
+        this.dispose(this.#remoteLogout);
+        this.#remoteLogout = false;
         this.transition({
           type: TransitionType.Ready,
         });
@@ -238,15 +299,38 @@ class Lifecycle {
     }
   }
 
+  /**
+   * Tear down towards State.Dispose, optionally invalidating the
+   * session server-side.
+   */
+  #teardown(remoteLogout: boolean) {
+    this.#remoteLogout = remoteLogout;
+    this.#enter(State.Dispose);
+  }
+
   transition(transition: Transition) {
-    console.debug("Received transition", transition.type);
+    console.debug(
+      "Received transition",
+      transition.type,
+      "on",
+      this.instanceUrl,
+    );
 
     if (transition.type === TransitionType.DisposeOnly) {
-      this.dispose();
+      this.dispose(false);
       return;
     }
 
     const currentState = this.state();
+
+    // switching away is valid from any state that holds a client
+    if (transition.type === TransitionType.Suspend) {
+      if (currentState !== State.Ready && currentState !== State.Dispose) {
+        this.#teardown(false);
+      }
+      return;
+    }
+
     switch (currentState) {
       case State.Ready:
         if (transition.type === TransitionType.LoginUncached) {
@@ -284,12 +368,12 @@ class Lifecycle {
         if (transition.type === TransitionType.UserCreated) {
           this.#enter(State.Connecting);
         } else if (transition.type === TransitionType.Cancel) {
-          this.#enter(State.Dispose);
+          this.#teardown(true);
         }
         break;
       case State.Error:
         if (transition.type === TransitionType.Dismiss) {
-          this.#enter(State.Dispose);
+          this.#teardown(false);
         }
         break;
       case State.Dispose:
@@ -310,7 +394,7 @@ class Lifecycle {
             this.#enter(State.Error);
             break;
           case TransitionType.Logout:
-            this.#enter(State.Dispose);
+            this.#teardown(true);
             break;
         }
         break;
@@ -320,7 +404,7 @@ class Lifecycle {
             this.#enter(State.Disconnected);
             break;
           case TransitionType.Logout:
-            this.#enter(State.Dispose);
+            this.#teardown(true);
             break;
         }
         break;
@@ -333,7 +417,7 @@ class Lifecycle {
             this.#enter(State.Reconnecting);
             break;
           case TransitionType.Logout:
-            this.#enter(State.Dispose);
+            this.#teardown(true);
             break;
         }
         break;
@@ -350,7 +434,7 @@ class Lifecycle {
             this.#enter(State.Error);
             break;
           case TransitionType.Logout:
-            this.#enter(State.Dispose);
+            this.#teardown(true);
             break;
         }
         break;
@@ -363,7 +447,7 @@ class Lifecycle {
             this.#enter(State.Reconnecting);
             break;
           case TransitionType.Logout:
-            this.#enter(State.Dispose);
+            this.#teardown(true);
             break;
         }
         break;
@@ -428,23 +512,76 @@ class Lifecycle {
 }
 
 /**
- * Controls lifecycle of clients
+ * Stable facade over whichever instance's Lifecycle is currently active.
+ *
+ * Components destructure `lifecycle` once from context; this object never
+ * changes identity, while every access resolves through the reactive
+ * active-instance signal — so UI tracking `lifecycle.state()` updates
+ * when the user switches instance.
+ */
+export class ActiveLifecycle {
+  #controller: ClientController;
+
+  constructor(controller: ClientController) {
+    this.#controller = controller;
+    this.state = this.state.bind(this);
+    this.loadedOnce = this.loadedOnce.bind(this);
+    this.policyAttentionRequired = this.policyAttentionRequired.bind(this);
+    this.transition = this.transition.bind(this);
+  }
+
+  #current(): Lifecycle {
+    return this.#controller.lifecycleFor(this.#controller.activeInstance());
+  }
+
+  state(): State {
+    return this.#current().state();
+  }
+
+  loadedOnce(): boolean {
+    return this.#current().loadedOnce();
+  }
+
+  policyAttentionRequired(): undefined | PolicyAttentionRequired {
+    return this.#current().policyAttentionRequired();
+  }
+
+  get client(): Client {
+    return this.#current().client;
+  }
+
+  transition(transition: Transition) {
+    this.#current().transition(transition);
+  }
+
+  get permanentError() {
+    return this.#current().permanentError;
+  }
+}
+
+/**
+ * Controls the lifecycles of clients, one per instance the user is
+ * signed into; exactly one instance is "active" (rendered) at a time.
  */
 export default class ClientController {
   /**
-   * API Client
+   * Lifecycle facade for the active instance
    */
-  readonly api: API.API;
-
-  /**
-   * Lifecycle
-   */
-  readonly lifecycle: Lifecycle;
+  readonly lifecycle: ActiveLifecycle;
 
   /**
    * Reference to application state
    */
   readonly state: ApplicationState;
+
+  /**
+   * The active instance's API URL (reactive)
+   */
+  readonly activeInstance: Accessor<string>;
+  #setActiveInstance: Setter<string>;
+
+  #lifecycles = new Map<string, Lifecycle>();
+  #apis = new Map<string, API.API>();
 
   /**
    * A memo to prevent isLoggedIn from bouncing when reconnecting
@@ -456,17 +593,22 @@ export default class ClientController {
    */
   constructor(state: ApplicationState) {
     this.state = state;
-    this.api = new API.API({
-      baseURL: CONFIGURATION.DEFAULT_API_URL,
-    });
 
-    this.lifecycle = new Lifecycle(this);
+    const [activeInstance, setActiveInstance] = createSignal(
+      state.auth.getActiveInstance() ?? DEFAULT_INSTANCE,
+    );
+    this.activeInstance = activeInstance;
+    this.#setActiveInstance = setActiveInstance;
+
+    this.lifecycle = new ActiveLifecycle(this);
 
     this.login = this.login.bind(this);
     this.logout = this.logout.bind(this);
     this.selectUsername = this.selectUsername.bind(this);
     this.isLoggedIn = this.isLoggedIn.bind(this);
     this.isError = this.isError.bind(this);
+    this.switchInstance = this.switchInstance.bind(this);
+    this.addInstance = this.addInstance.bind(this);
 
     this.isLoggedInState = createMemo(() =>
       [
@@ -478,17 +620,55 @@ export default class ClientController {
       ].includes(this.lifecycle.state()),
     );
 
-    const session = state.auth.getSession();
+    const session = state.auth.getSession(this.activeInstance());
     if (session) {
-      this.lifecycle.transition({
+      this.lifecycleFor(this.activeInstance()).transition({
         type: TransitionType.LoginCached,
         session,
       });
     }
   }
 
+  /**
+   * Get (or lazily create) the lifecycle for an instance.
+   */
+  lifecycleFor(instance: string): Lifecycle {
+    let lifecycle = this.#lifecycles.get(instance);
+    if (!lifecycle) {
+      lifecycle = new Lifecycle(this, instance);
+      this.#lifecycles.set(instance, lifecycle);
+    }
+    return lifecycle;
+  }
+
+  /**
+   * Unauthenticated API client for the active instance
+   */
+  get api(): API.API {
+    return this.apiFor(this.activeInstance());
+  }
+
+  /**
+   * Unauthenticated API client for an instance.
+   */
+  apiFor(instance: string): API.API {
+    let api = this.#apis.get(instance);
+    if (!api) {
+      api = new API.API({ baseURL: instance });
+      this.#apis.set(instance, api);
+    }
+    return api;
+  }
+
+  /**
+   * Best known configuration for an instance.
+   */
+  getInstanceConfig(instance: string): API.RevoltConfig | undefined {
+    return this.state.auth.getConfig(instance);
+  }
+
   getCurrentClient() {
-    return this.lifecycle.client;
+    return this.lifecycleFor(this.activeInstance()).client;
   }
 
   isLoggedIn() {
@@ -500,7 +680,42 @@ export default class ClientController {
   }
 
   /**
-   * Login given a set of credentials
+   * Make another instance the active one, disconnecting the current
+   * client without invalidating its stored session.
+   */
+  switchInstance(instance: string) {
+    if (instance === this.activeInstance()) return;
+
+    this.lifecycleFor(this.activeInstance()).transition({
+      type: TransitionType.Suspend,
+    });
+
+    this.state.auth.setActiveInstance(instance);
+    this.#setActiveInstance(instance);
+
+    const session = this.state.auth.getSession(instance);
+    const target = this.lifecycleFor(instance);
+    if (session && target.state() === State.Ready) {
+      target.transition({
+        type: TransitionType.LoginCached,
+        session,
+      });
+    }
+  }
+
+  /**
+   * Register a newly discovered instance and switch to it; the login
+   * flow then operates against it. The instance (and its configuration)
+   * is persisted immediately so a page reload cannot silently fall back
+   * to the default instance mid-signup.
+   */
+  addInstance(discovered: DiscoveredInstance) {
+    this.state.auth.addInstance(discovered.apiUrl, discovered.config);
+    this.switchInstance(discovered.apiUrl);
+  }
+
+  /**
+   * Login to the active instance given a set of credentials
    * @param credentials Credentials
    */
   async login(credentials: API.DataLogin, modals: ModalControllerExtended) {
@@ -520,13 +735,15 @@ export default class ClientController {
         os = "iPadOS";
       }
 
-      friendly_name = `Stoat for Web (${name} on ${os})`;
+      friendly_name = `${BRAND_NAME} for Web (${name} on ${os})`;
     } else {
-      friendly_name = "Stoat for Web (Unknown Device)";
+      friendly_name = `${BRAND_NAME} for Web (Unknown Device)`;
     }
 
+    const instance = this.activeInstance();
+
     // Try to login with given credentials
-    let session = await this.api.post("/auth/session/login", {
+    let session = await this.apiFor(instance).post("/auth/session/login", {
       ...credentials,
       friendly_name,
     });
@@ -550,7 +767,7 @@ export default class ClientController {
         }
 
         try {
-          session = await this.api.post("/auth/session/login", {
+          session = await this.apiFor(instance).post("/auth/session/login", {
             mfa_response,
             mfa_ticket: session.ticket,
             friendly_name,
@@ -578,8 +795,9 @@ export default class ClientController {
       valid: false,
     };
 
-    this.state.auth.setSession(createdSession);
-    this.lifecycle.transition({
+    this.state.auth.setSession(instance, createdSession);
+
+    this.lifecycleFor(instance).transition({
       type: TransitionType.LoginUncached,
       session: createdSession,
     });
@@ -595,18 +813,40 @@ export default class ClientController {
     });
   }
 
+  /**
+   * Log out of the active instance; if the user is signed into other
+   * instances, the first remaining one becomes active.
+   */
   logout() {
+    const instance = this.activeInstance();
+
     this.state.settings.resetNotificationsState();
     killServiceWorkerSubscription(this.getCurrentClient(), true);
-    this.state.auth.removeSession();
-    this.lifecycle.transition({
+    this.state.auth.removeSession(instance);
+    this.lifecycleFor(instance).transition({
       type: TransitionType.Logout,
     });
+
+    const next = this.state.auth.getActiveInstance();
+    if (next && next !== instance) {
+      this.#setActiveInstance(next);
+
+      const session = this.state.auth.getSession(next);
+      const target = this.lifecycleFor(next);
+      if (session && target.state() === State.Ready) {
+        target.transition({
+          type: TransitionType.LoginCached,
+          session,
+        });
+      }
+    }
   }
 
   dispose() {
-    this.lifecycle.transition({
-      type: TransitionType.DisposeOnly,
-    });
+    for (const lifecycle of this.#lifecycles.values()) {
+      lifecycle.transition({
+        type: TransitionType.DisposeOnly,
+      });
+    }
   }
 }

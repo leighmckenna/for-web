@@ -1,9 +1,10 @@
-import { Match, Switch } from "solid-js";
+import { Match, Show, Switch } from "solid-js";
 
 import { Trans } from "@lingui-solid/solid/macro";
 
-import { useClientLifecycle } from "@revolt/client";
+import { useClientController, useClientLifecycle } from "@revolt/client";
 import { State, TransitionType } from "@revolt/client/Controller";
+import { DEFAULT_INSTANCE } from "@revolt/client/instances";
 import { useModals } from "@revolt/modal";
 import { Navigate } from "@revolt/routing";
 import {
@@ -28,6 +29,15 @@ export default function FlowLogin() {
   const state = useState();
   const modals = useModals();
   const { lifecycle, isLoggedIn, login, selectUsername } = useClientLifecycle();
+  const controller = useClientController();
+
+  /**
+   * Host name of the active instance, if it isn't this build's default
+   */
+  const instanceHost = () => {
+    const active = controller.activeInstance();
+    return active === DEFAULT_INSTANCE ? undefined : new URL(active).host;
+  };
 
   /**
    * Log into account
@@ -62,10 +72,15 @@ export default function FlowLogin() {
       <Switch
         fallback={
           <>
-            {/* TODO(multi-host): show the instance's own name here once
-                sessions carry per-host configuration */}
             <FlowTitle
-              subtitle={<Trans>Sign in to continue</Trans>}
+              subtitle={
+                <Show
+                  when={instanceHost()}
+                  fallback={<Trans>Sign in to continue</Trans>}
+                >
+                  <Trans>Sign in to {instanceHost()}</Trans>
+                </Show>
+              }
               emoji="wave"
             >
               <Trans>Welcome!</Trans>

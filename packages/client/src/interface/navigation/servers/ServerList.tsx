@@ -5,8 +5,8 @@ import { Channel, Server, User } from "stoat.js";
 import { cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
-import { useClient } from "@revolt/client";
-import { CONFIGURATION, useDevice } from "@revolt/common";
+import { useClient, useIsFirstPartyInstance } from "@revolt/client";
+import { useDevice } from "@revolt/common";
 import { KeybindAction, createKeybind } from "@revolt/keybinds";
 import { useModals } from "@revolt/modal";
 import { useNavigate } from "@revolt/routing";
@@ -14,6 +14,7 @@ import { useState } from "@revolt/state";
 import { Avatar, Column, Text, Time, Unreads, UserStatus } from "@revolt/ui";
 
 import MdAdd from "@material-design-icons/svg/filled/add.svg?component-solid";
+import MdDns from "@material-design-icons/svg/filled/dns.svg?component-solid";
 import MdExplore from "@material-design-icons/svg/filled/explore.svg?component-solid";
 import MdHome from "@material-design-icons/svg/filled/home.svg?component-solid";
 import MdSettings from "@material-design-icons/svg/filled/settings.svg?component-solid";
@@ -70,6 +71,7 @@ export const ServerList = (props: Props) => {
   const navigate = useNavigate();
   const { isMobile } = useDevice();
   const { openModal } = useModals();
+  const isFirstPartyInstance = useIsFirstPartyInstance();
 
   const navigateServer = (byOffset: number) => {
     const serverId = props.selectedServer();
@@ -299,7 +301,7 @@ export const ServerList = (props: Props) => {
             <Avatar size={42} fallback={<MdAdd />} />
           </a>
         </Tooltip>
-        <Show when={CONFIGURATION.IS_STOAT}>
+        <Show when={isFirstPartyInstance()}>
           <Tooltip placement="right" content={"Find new servers to join"}>
             <a
               href={state.layout.getLastActiveDiscoverPath()}
@@ -313,6 +315,14 @@ export const ServerList = (props: Props) => {
       <Shadow>
         <div />
       </Shadow>
+      <Tooltip placement="right" content="Instances">
+        <a
+          class={entryContainer()}
+          onClick={() => openModal({ type: "switch_instance" })}
+        >
+          <Avatar size={42} fallback={<MdDns />} interactive />
+        </a>
+      </Tooltip>
       <Tooltip placement="right" content="Settings">
         <a
           class={entryContainer()}

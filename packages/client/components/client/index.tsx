@@ -10,6 +10,7 @@ import {
 
 import type { Client, User } from "stoat.js";
 
+import { isFirstPartyHost } from "@revolt/common";
 import { useModals } from "@revolt/modal";
 import { fetchLatestChangelog } from "@revolt/modal/modals/Changelog";
 import { State } from "@revolt/state";
@@ -99,6 +100,24 @@ export function useClientLifecycle() {
     isLoggedIn,
     isError,
   };
+}
+
+/**
+ * Get the client controller itself (instance management)
+ * @returns ClientController
+ */
+export function useClientController(): ClientController {
+  return useContext(clientContext);
+}
+
+/**
+ * Whether the active instance is an official Stoat instance
+ * (gates surfaces that only exist there: lounge, discover, feedback)
+ * @returns Reactive boolean
+ */
+export function useIsFirstPartyInstance(): Accessor<boolean> {
+  const controller = useContext(clientContext);
+  return () => isFirstPartyHost(controller.activeInstance());
 }
 
 /**

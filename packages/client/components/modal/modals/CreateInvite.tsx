@@ -4,7 +4,7 @@ import { Trans } from "@lingui-solid/solid/macro";
 import { useMutation } from "@tanstack/solid-query";
 import { styled } from "styled-system/jsx";
 
-import { CONFIGURATION } from "@revolt/common";
+import { useClient, useIsFirstPartyInstance } from "@revolt/client";
 import { Dialog, DialogProps } from "@revolt/ui";
 
 import { useModals } from "..";
@@ -37,17 +37,24 @@ export function CreateInviteModal(
   const { showError } = useModals();
   const [link, setLink] = createSignal("...");
 
+  const getClient = useClient();
+  const isFirstPartyInstance = useIsFirstPartyInstance();
+
+  /**
+   * Invite links must point at the instance the channel lives on,
+   * not at wherever this app happens to be served from.
+   */
+  function inviteLink(id: string) {
+    if (isFirstPartyInstance()) return `https://stt.gg/${id}`;
+
+    const app = getClient()?.configuration?.app?.replace(/\/+$/, "");
+    const base = app || window.location.origin;
+    return `${base}/invite/${id}`;
+  }
+
   const fetchInvite = useMutation(() => ({
     mutationFn: () =>
-      props.channel
-        .createInvite()
-        .then(({ _id }) =>
-          setLink(
-            CONFIGURATION.IS_STOAT
-              ? `https://stt.gg/${_id}`
-              : `${window.location.protocol}//${window.location.host}/invite/${_id}`,
-          ),
-        ),
+      props.channel.createInvite().then(({ _id }) => setLink(inviteLink(_id))),
     onError: showError,
   }));
 
